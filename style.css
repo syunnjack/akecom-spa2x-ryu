@@ -1,0 +1,111 @@
+:root {
+  color-scheme: dark;
+  font-family: "BIZ UDPGothic", "Yu Gothic", system-ui, sans-serif;
+  background: #100d0d;
+  color: #fff8ed;
+  --red: #e2382a;
+  --gold: #ffcf66;
+  --panel: #211919;
+  --line: #463434;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% -10%, #5c1b19 0, transparent 35rem),
+    repeating-linear-gradient(135deg, transparent 0 12px, #ffffff05 12px 13px),
+    #100d0d;
+}
+
+button, input { font: inherit; }
+button { touch-action: manipulation; }
+
+.app {
+  width: min(100% - 24px, 780px);
+  margin: auto;
+  padding: 36px 0 max(32px, env(safe-area-inset-bottom));
+}
+
+.hero { text-align: center; margin-bottom: 24px; }
+.eyebrow { color: var(--gold); font-size: .72rem; letter-spacing: .2em; }
+h1 { margin: 6px 0; font-size: clamp(2.3rem, 10vw, 5rem); line-height: .95; font-style: italic; }
+.hero > p:last-child { color: #d4c2ba; }
+
+.status-card, .command-card, .controls-card, .history-card, .settings-card {
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 14px 40px #0006;
+}
+
+.status-card {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.status-card > div { padding: 16px; border-right: 1px solid var(--line); }
+.status-card > div:last-child { border: 0; }
+.label { display: block; color: #bfa9a0; font-size: .72rem; margin-bottom: 5px; }
+#result.success { color: #7ee787; }
+#result.fail { color: #ff7b72; }
+
+.command-card, .history-card, .settings-card { padding: 20px; margin-bottom: 12px; }
+.command-head, .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+h2 { margin: 0; font-size: 1rem; }
+.small-button {
+  color: #eee1da;
+  background: #322626;
+  border: 1px solid #594444;
+  border-radius: 999px;
+  padding: 8px 12px;
+}
+
+.command { display: flex; justify-content: center; align-items: center; gap: clamp(6px, 2vw, 14px); padding: 24px 0; font-size: clamp(1.4rem, 6vw, 2.4rem); }
+.command span { opacity: .3; transition: .15s; }
+.command span.active { opacity: 1; color: var(--gold); transform: translateY(-3px); }
+.command span.done { opacity: 1; color: #fff; }
+.command .attack { padding: .22em .4em; border-radius: 9px; background: var(--red); font-size: .55em; opacity: 1; }
+
+.timeline { height: 7px; border-radius: 9px; overflow: hidden; background: #0b0909; }
+#timeline-fill { width: 0; height: 100%; background: linear-gradient(90deg, #67d174, var(--gold), var(--red)); }
+#hint { margin: 12px 0 0; color: #c8b5ad; text-align: center; font-size: .88rem; }
+
+.controls-card { display: grid; grid-template-columns: 1fr 1.3fr; gap: 22px; padding: 22px; margin-bottom: 12px; }
+.d-pad { display: grid; grid-template: repeat(3, 58px) / repeat(3, 58px); justify-content: center; }
+.d-pad button, .buttons button {
+  color: white;
+  background: #352929;
+  border: 1px solid #655050;
+  box-shadow: inset 0 -4px #0006;
+}
+.d-pad button:active, .d-pad button.pressed, .buttons button:active, .buttons button.pressed { transform: translateY(2px); background: #76524d; box-shadow: none; }
+.d-pad button { border-radius: 9px; font-size: 1.4rem; }
+.up { grid-area: 1 / 2; }.left { grid-area: 2 / 1; }.down { grid-area: 2 / 2; }.right { grid-area: 2 / 3; }
+.buttons { display: grid; grid-template-columns: repeat(2, minmax(70px, 1fr)); gap: 12px; align-content: center; }
+.buttons button { min-height: 62px; border-radius: 50%; font-weight: 700; }
+.buttons .kick { background: #a22b22; border-color: #ef665b; }
+
+.history { min-height: 54px; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; padding-top: 16px; }
+.history span { padding: 7px 9px; background: #332727; border-radius: 7px; }
+.history small { color: #bfa9a0; }
+.muted { color: #a8938c; }
+
+.settings-card summary { cursor: pointer; font-weight: 700; }
+.settings-card label { display: grid; grid-template-columns: 1fr minmax(100px, 2fr) auto; align-items: center; gap: 12px; margin-top: 18px; }
+.settings-card input { min-width: 0; padding: 9px; color: white; background: #151111; border: 1px solid var(--line); border-radius: 7px; }
+#connect { margin-top: 18px; padding: 11px 15px; border: 0; border-radius: 8px; color: white; background: var(--red); }
+footer { text-align: center; padding: 16px; color: #8d7770; font-size: .75rem; }
+
+@media (max-width: 580px) {
+  .app { padding-top: 22px; }
+  .status-card { grid-template-columns: 1.5fr 1fr 1fr; }
+  .status-card > div { padding: 12px 10px; }
+  .controls-card { grid-template-columns: 1fr; }
+  .settings-card label { grid-template-columns: 1fr; }
+}
+
