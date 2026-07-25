@@ -17,6 +17,9 @@ const state = {
   streak: 0,
   gamepadIndex: null,
   previousPad: { buttons: [], direction: "neutral" },
+  motionBuffer: [],
+  lastDirection: "neutral",
+  inputDirection: "neutral",
 };
 
 const el = {
@@ -39,12 +42,17 @@ function nowFrames(start) {
   return Math.round((performance.now() - start) / frameMs);
 }
 
-function expectedSequence() {
+function starterSequence() {
   const forward = state.facing;
-  return ["down", `down-${forward}`, forward, "down", `down-${forward}`, forward, "punch"];
+  return ["down", `down-${forward}`, forward, "down"];
 }
 
-function currentDirection() {
+function finishSequence() {
+  const forward = state.facing;
+  return [`down-${forward}`, forward];
+}
+
+function currentKeyboardDirection() {
   const vertical = state.held.has("down") ? "down" : state.held.has("up") ? "up" : "";
   const horizontal = state.held.has("left") ? "left" : state.held.has("right") ? "right" : "";
   return [vertical, horizontal].filter(Boolean).join("-") || "neutral";
@@ -71,17 +79,31 @@ function paintCommand(step = -1) {
 }
 
 function startAttempt() {
-  if (currentDirection() !== "down") {
+  if (state.inputDirection !== "down") {
     setResult("↓＋中Kから", "fail");
-    el.hint.textContent = "先に真下を入れ、そのまま中Kを押してください。";
+    el.hint.textContent = "↓↘→を仕込んでから、真下＋中Kを押してください。";
     return;
   }
-  state.attempt = { startedAt: performance.now(), step: 0, lastDirection: "neutral" };
+
+  const starter = starterSequence();
+  const recent = state.motionBuffer.slice(-starter.length);
+  if (recent.length !== starter.length || recent.some((item, index) => item.direction !== starter[index])) {
+    setResult("仕込み不足", "fail");
+    el.hint.textContent = "中Kの前に ↓↘→、続けて ↓＋中K と入力してください。";
+    return;
+  }
+
+  const startedAt = performance.now();
+  state.attempt = { startedAt, step: 0 };
   state.history = [];
+  recent.slice(0, -1).forEach((item) => {
+    addHistory(directionGlyph[item.direction], Math.round((item.time - startedAt) / frameMs));
+  });
   addHistory("↓＋中K", 0);
-  setResult("入力中");
-  paintCommand(0);
-  el.hint.textContent = "二回の波動を一息で入力！";
+  state.motionBuffer = [];
+  setResult("キャンセル入力");
+  paintCommand(3);
+  el.hint.textContent = "残りは ↘→＋P。中足が戻る前に入力！";
 }
 
 function finishAttempt(success, reason) {
@@ -91,8 +113,8 @@ function finishAttempt(success, reason) {
   if (success) {
     state.streak += 1;
     setResult("成功！", "success");
-    el.hint.textContent = `${frames}F。力まず、このリズムを再現しよう。`;
-    paintCommand(7);
+    el.hint.textContent = `${frames}F。仕込みから残り半回転への流れを再現しよう。`;
+    paintCommand(6);
   } else {
     state.streak = 0;
     setResult("もう一度", "fail");
@@ -102,22 +124,45 @@ function finishAttempt(success, reason) {
   state.attempt = null;
 }
 
-function registerDirection(direction) {
-  if (!state.attempt || direction === "neutral" || direction === state.attempt.lastDirection) return;
-  state.attempt.lastDirection = direction;
-  const frame = nowFrames(state.attempt.startedAt);
-  addHistory(directionGlyph[direction], frame);
+function updateStarterProgress() {
+  const starter = starterSequence();
+  let matched = 0;
+  for (let size = Math.min(starter.length, state.motionBuffer.length); size > 0; size -= 1) {
+    const tail = state.motionBuffer.slice(-size).map((item) => item.direction);
+    if (tail.every((item, index) => item === starter[index])) {
+      matched = size;
+      break;
+    }
+  }
+  paintCommand(Math.min(matched, 3) - 1);
+}
 
-  const sequence = expectedSequence();
-  if (direction === sequence[state.attempt.step]) {
-    state.attempt.step += 1;
-    paintCommand(state.attempt.step);
-  } else if (direction === "down" && [0, 3].includes(state.attempt.step)) {
-    // 同じ↓の再入力は継続として扱う
+function registerDirection(direction) {
+  state.inputDirection = direction;
+  if (direction === "neutral") {
+    state.lastDirection = "neutral";
+    return;
+  }
+  if (direction === state.lastDirection) return;
+  state.lastDirection = direction;
+
+  if (!state.attempt) {
+    const time = performance.now();
+    state.motionBuffer.push({ direction, time });
+    state.motionBuffer = state.motionBuffer.filter((item) => time - item.time <= 1000).slice(-10);
+    updateStarterProgress();
+    return;
   }
 
+  const frame = nowFrames(state.attempt.startedAt);
+  addHistory(directionGlyph[direction], frame);
+  const sequence = finishSequence();
+  if (direction === sequence[state.attempt.step]) {
+    state.attempt.step += 1;
+    paintCommand(3 + state.attempt.step);
+  }
   if (frame > Number(el.target.value)) {
-    finishAttempt(false, `目標を${frame - Number(el.target.value)}F超えました。レバーを小さく速く。`);
+    finishAttempt(false, `中K後の目標を${frame - Number(el.target.value)}F超えました。↘→＋Pを素早く。`);
   }
 }
 
@@ -129,17 +174,17 @@ function registerAction(action) {
   if (!["lp", "mp", "hp", "punch"].includes(action) || !state.attempt) return;
   const frame = nowFrames(state.attempt.startedAt);
   addHistory("P", frame);
-  const complete = state.attempt.step >= 6;
+  const complete = state.attempt.step >= 2;
   const withinTime = frame <= Number(el.target.value);
   finishAttempt(
     complete && withinTime,
-    complete ? "コマンドは完成。パンチを少し早く。" : "方向が足りません。履歴で抜けた斜めを確認。"
+    complete ? "入力は完成。パンチを少し早く。" : "中K後の↘→が足りません。入力履歴を確認。"
   );
 }
 
 function updateHeld(direction, pressed) {
   pressed ? state.held.add(direction) : state.held.delete(direction);
-  registerDirection(currentDirection());
+  registerDirection(currentKeyboardDirection());
 }
 
 document.addEventListener("keydown", (event) => {
@@ -186,8 +231,8 @@ function toggleFacing() {
   state.facing = state.facing === "right" ? "left" : "right";
   el.facing.textContent = state.facing === "right" ? "向き：右 →" : "向き：左 ←";
   const glyphs = state.facing === "right"
-    ? ["↓＋中K", "↓", "↘", "→", "↓", "↘", "→", "P"]
-    : ["↓＋中K", "↓", "↙", "←", "↓", "↙", "←", "P"];
+    ? ["↓", "↘", "→", "↓＋中K", "↘", "→", "P"]
+    : ["↓", "↙", "←", "↓＋中K", "↙", "←", "P"];
   el.command.forEach((node, i) => { node.textContent = glyphs[i]; });
   reset();
 }
@@ -196,12 +241,15 @@ function reset() {
   state.attempt = null;
   state.history = [];
   state.held.clear();
+  state.motionBuffer = [];
+  state.lastDirection = "neutral";
+  state.inputDirection = "neutral";
   el.history.innerHTML = '<span class="muted">入力待ち</span>';
   el.frames.textContent = "—";
   el.timeline.style.width = "0";
   setResult("準備OK");
   paintCommand(-1);
-  el.hint.textContent = "↓を入れたまま中Kを押すと計測を始めます。";
+  el.hint.textContent = "↓↘→を仕込み、↓＋中Kから↘→＋Pへつなぎます。";
 }
 
 el.facing.addEventListener("click", toggleFacing);
@@ -257,7 +305,7 @@ function animateTimeline() {
   if (state.attempt) {
     const progress = Math.min(100, nowFrames(state.attempt.startedAt) / Number(el.target.value) * 100);
     el.timeline.style.width = `${progress}%`;
-    if (progress >= 100) finishAttempt(false, "時間切れ。まずは二回転だけを滑らかに。");
+    if (progress >= 100) finishAttempt(false, "時間切れ。中K後の↘→＋Pを滑らかに。");
   }
   requestAnimationFrame(animateTimeline);
 }
