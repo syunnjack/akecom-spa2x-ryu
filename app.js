@@ -71,9 +71,14 @@ function paintCommand(step = -1) {
 }
 
 function startAttempt() {
+  if (currentDirection() !== "down") {
+    setResult("↓＋中Kから", "fail");
+    el.hint.textContent = "先に真下を入れ、そのまま中Kを押してください。";
+    return;
+  }
   state.attempt = { startedAt: performance.now(), step: 0, lastDirection: "neutral" };
   state.history = [];
-  addHistory("中K", 0);
+  addHistory("↓＋中K", 0);
   setResult("入力中");
   paintCommand(0);
   el.hint.textContent = "二回の波動を一息で入力！";
@@ -181,8 +186,8 @@ function toggleFacing() {
   state.facing = state.facing === "right" ? "left" : "right";
   el.facing.textContent = state.facing === "right" ? "向き：右 →" : "向き：左 ←";
   const glyphs = state.facing === "right"
-    ? ["中K", "↓", "↘", "→", "↓", "↘", "→", "P"]
-    : ["中K", "↓", "↙", "←", "↓", "↙", "←", "P"];
+    ? ["↓＋中K", "↓", "↘", "→", "↓", "↘", "→", "P"]
+    : ["↓＋中K", "↓", "↙", "←", "↓", "↙", "←", "P"];
   el.command.forEach((node, i) => { node.textContent = glyphs[i]; });
   reset();
 }
@@ -196,7 +201,7 @@ function reset() {
   el.timeline.style.width = "0";
   setResult("準備OK");
   paintCommand(-1);
-  el.hint.textContent = "中Kを押すと計測を始めます。";
+  el.hint.textContent = "↓を入れたまま中Kを押すと計測を始めます。";
 }
 
 el.facing.addEventListener("click", toggleFacing);
@@ -260,4 +265,3 @@ function animateTimeline() {
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js");
 pollGamepad();
 animateTimeline();
-
