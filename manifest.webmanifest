@@ -1,0 +1,11 @@
+{
+  "name": "真空トレーナー",
+  "short_name": "真空練習",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#100d0d",
+  "theme_color": "#b71c1c",
+  "lang": "ja",
+  "description": "スパ2Xリュウの中足キャンセル真空波動拳を練習する入力トレーナー"
+}
+
