@@ -37,11 +37,11 @@
           <h2>目標入力</h2>
           <button id="facing" class="small-button" type="button">向き：右 →</button>
         </div>
-        <div id="command" class="command" aria-label="下中キック、下、右下、右、下、右下、右、パンチ">
-          <span class="attack">↓＋中K</span><span>↓</span><span>↘</span><span>→</span><span>↓</span><span>↘</span><span>→</span><span class="attack">P</span>
+        <div id="command" class="command" aria-label="下、右下、右、下中キック、右下、右、パンチ">
+          <span>↓</span><span>↘</span><span>→</span><span class="attack">↓＋中K</span><span>↘</span><span>→</span><span class="attack">P</span>
         </div>
         <div class="timeline"><div id="timeline-fill"></div></div>
-        <p id="hint">↓を入れたまま中Kを押すと計測を始めます。</p>
+        <p id="hint">↓↘→を仕込み、↓＋中Kから↘→＋Pへつなぎます。</p>
       </section>
 
       <section class="controls-card">
@@ -70,7 +70,7 @@
       <details class="settings-card">
         <summary>練習設定</summary>
         <label>
-          目標フレーム
+          中K後の目標フレーム
           <input id="target-frames" type="range" min="8" max="30" value="16" />
           <output id="target-output">16 F</output>
         </label>
