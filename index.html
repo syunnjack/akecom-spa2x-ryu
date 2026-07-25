@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#b71c1c" />
+    <meta name="description" content="スパ2Xリュウの中足キャンセル真空波動拳を練習する入力トレーナー" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./style.css" />
+    <title>真空トレーナー</title>
+  </head>
+  <body>
+    <main class="app">
+      <header class="hero">
+        <p class="eyebrow">SUPER TURBO · RYU TRAINING</p>
+        <h1>真空トレーナー</h1>
+        <p>中足から、二回転を途切れさせない。</p>
+      </header>
+
+      <section class="status-card" aria-live="polite">
+        <div>
+          <span class="label">判定</span>
+          <strong id="result">準備OK</strong>
+        </div>
+        <div>
+          <span class="label">所要</span>
+          <strong><span id="frames">—</span> F</strong>
+        </div>
+        <div>
+          <span class="label">連続成功</span>
+          <strong><span id="streak">0</span> 回</strong>
+        </div>
+      </section>
+
+      <section class="command-card">
+        <div class="command-head">
+          <h2>目標入力</h2>
+          <button id="facing" class="small-button" type="button">向き：右 →</button>
+        </div>
+        <div id="command" class="command" aria-label="中キック、下、右下、右、下、右下、右、パンチ">
+          <span class="attack">中K</span><span>↓</span><span>↘</span><span>→</span><span>↓</span><span>↘</span><span>→</span><span class="attack">P</span>
+        </div>
+        <div class="timeline"><div id="timeline-fill"></div></div>
+        <p id="hint">中Kを押すと計測を始めます。</p>
+      </section>
+
+      <section class="controls-card">
+        <div class="d-pad" aria-label="方向入力">
+          <button data-direction="up" class="up" type="button">↑</button>
+          <button data-direction="left" class="left" type="button">←</button>
+          <button data-direction="down" class="down" type="button">↓</button>
+          <button data-direction="right" class="right" type="button">→</button>
+        </div>
+        <div class="buttons" aria-label="攻撃ボタン">
+          <button data-action="mk" class="kick" type="button">中K</button>
+          <button data-action="lp" type="button">弱P</button>
+          <button data-action="mp" type="button">中P</button>
+          <button data-action="hp" type="button">強P</button>
+        </div>
+      </section>
+
+      <section class="history-card">
+        <div class="section-head">
+          <h2>入力履歴</h2>
+          <button id="reset" class="small-button" type="button">リセット</button>
+        </div>
+        <div id="history" class="history"><span class="muted">入力待ち</span></div>
+      </section>
+
+      <details class="settings-card">
+        <summary>練習設定</summary>
+        <label>
+          目標フレーム
+          <input id="target-frames" type="range" min="8" max="30" value="16" />
+          <output id="target-output">16 F</output>
+        </label>
+        <label>
+          中Kボタン番号
+          <input id="mk-button" type="number" min="0" max="31" value="2" />
+        </label>
+        <label>
+          パンチボタン番号（カンマ区切り）
+          <input id="punch-buttons" type="text" value="0,1,3" />
+        </label>
+        <button id="connect" type="button">アケコン接続</button>
+        <p id="gamepad-status" class="muted">未接続</p>
+      </details>
+
+      <footer>入力を自動送信しない、練習専用ツールです。</footer>
+    </main>
+    <script src="./app.js" defer></script>
+  </body>
+</html>
+
