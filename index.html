@@ -82,8 +82,17 @@
           パンチボタン番号（カンマ区切り）
           <input id="punch-buttons" type="text" value="0,1,3" />
         </label>
-        <button id="connect" type="button">アケコン接続</button>
+        <div class="setup-actions">
+          <button id="connect" type="button">アケコン接続</button>
+          <button id="learn-mk" class="secondary-button" type="button">中Kを自動設定</button>
+          <button id="learn-punches" class="secondary-button" type="button">パンチを自動設定</button>
+        </div>
         <p id="gamepad-status" class="muted">未接続</p>
+        <div class="input-monitor" aria-live="polite">
+          <span>方向 <strong id="live-direction">・</strong></span>
+          <span>押下ボタン <strong id="live-buttons">なし</strong></span>
+        </div>
+        <p id="learn-status" class="muted">接続後、レバーとボタンの反応をここで確認できます。</p>
       </details>
 
       <footer>入力を自動送信しない、練習専用ツールです。</footer>
