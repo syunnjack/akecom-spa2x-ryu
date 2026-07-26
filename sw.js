@@ -1,4 +1,4 @@
-const CACHE = "shinku-trainer-v2";
+const CACHE = "shinku-trainer-v3";
 const ASSETS = ["./", "./index.html", "./style.css", "./app.js", "./manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
