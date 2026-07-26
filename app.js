@@ -8,6 +8,14 @@ const directionGlyph = {
   neutral: "・", up: "↑", down: "↓", left: "←", right: "→",
   "down-left": "↙", "down-right": "↘", "up-left": "↖", "up-right": "↗",
 };
+const directionNumber = {
+  neutral: "N", "down-left": "1", down: "2", "down-right": "3",
+  left: "4", right: "6", "up-left": "7", up: "8", "up-right": "9",
+};
+const directionGridIndex = {
+  "up-left": 0, up: 1, "up-right": 2, left: 3, neutral: 4,
+  right: 5, "down-left": 6, down: 7, "down-right": 8,
+};
 
 const state = {
   facing: "right",
@@ -22,6 +30,8 @@ const state = {
   inputDirection: "neutral",
   learnTarget: null,
   learnedPunches: new Set(),
+  leverTimeline: [],
+  buttonTimeline: [],
 };
 
 const el = {
@@ -43,6 +53,7 @@ const el = {
   learnStatus: document.querySelector("#learn-status"),
   learnMk: document.querySelector("#learn-mk"),
   learnPunches: document.querySelector("#learn-punches"),
+  leverTimeline: document.querySelector("#lever-timeline"),
 };
 
 const savedSettings = JSON.parse(localStorage.getItem("shinku-trainer.settings") || "{}");
@@ -100,11 +111,76 @@ function paintCommand(step = -1) {
   });
 }
 
+function stickDiagram(direction) {
+  const activeIndex = directionGridIndex[direction];
+  return `<span class="stick-map" aria-hidden="true">${Array.from({ length: 9 }, (_, index) =>
+    `<i class="${index === activeIndex ? "active" : ""}"></i>`
+  ).join("")}</span>`;
+}
+
+function renderLeverTimeline() {
+  const entries = [
+    ...state.leverTimeline.map((entry) => ({ ...entry, type: "lever" })),
+    ...state.buttonTimeline.map((entry) => ({ ...entry, type: "button" })),
+  ].sort((a, b) => a.startedAt - b.startedAt).slice(-18);
+  if (!entries.length) {
+    el.leverTimeline.innerHTML = '<li class="timeline-empty">レバー・ボタン入力待ち</li>';
+    return;
+  }
+  const maxFrames = Math.max(1, ...state.leverTimeline.map((entry) => entry.frames));
+  const currentLever = state.leverTimeline[state.leverTimeline.length - 1];
+  el.leverTimeline.innerHTML = entries.map((entry) => {
+    if (entry.type === "button") {
+      const frameText = entry.frame === null ? "—" : `${entry.frame}F`;
+      return `<li class="button-entry ${entry.verdict}">
+        <span class="button-name">${entry.label}</span>
+        <span class="button-detail">${entry.detail}</span>
+        <span class="button-verdict">${entry.verdict === "ok" ? "OK" : entry.verdict === "ng" ? "NG" : frameText}</span>
+      </li>`;
+    }
+    const current = entry.startedAt === currentLever?.startedAt;
+    const width = Math.max(4, Math.round(entry.frames / maxFrames * 100));
+    return `<li class="lever-entry${current ? " current" : ""}">
+      <span class="lever-glyph">${directionGlyph[entry.direction]}</span>
+      <span class="lever-number">${directionNumber[entry.direction]}</span>
+      ${stickDiagram(entry.direction)}
+      <span class="lever-frames">${entry.frames}F</span>
+      <span class="lever-bar" style="width:${width}%"></span>
+    </li>`;
+  }).join("");
+}
+
+function recordButton(label, verdict, detail, frame = null) {
+  state.buttonTimeline.push({ label, verdict, detail, frame, startedAt: performance.now() });
+  state.buttonTimeline = state.buttonTimeline.slice(-18);
+  renderLeverTimeline();
+}
+
+function recordLeverDirection(direction) {
+  const now = performance.now();
+  const current = state.leverTimeline[state.leverTimeline.length - 1];
+  if (current?.direction === direction) return;
+  if (current) current.frames = Math.max(1, Math.round((now - current.startedAt) / frameMs));
+  state.leverTimeline.push({ direction, startedAt: now, frames: 0 });
+  state.leverTimeline = state.leverTimeline.slice(-18);
+  renderLeverTimeline();
+}
+
+function updateCurrentLeverFrames() {
+  const current = state.leverTimeline[state.leverTimeline.length - 1];
+  if (!current) return;
+  const frames = Math.max(0, Math.round((performance.now() - current.startedAt) / frameMs));
+  if (frames !== current.frames) {
+    current.frames = frames;
+    renderLeverTimeline();
+  }
+}
+
 function startAttempt() {
   if (state.inputDirection !== "down") {
     setResult("↓＋中Kから", "fail");
     el.hint.textContent = "↓↘→を仕込んでから、真下＋中Kを押してください。";
-    return;
+    return false;
   }
 
   const starter = starterSequence();
@@ -112,7 +188,7 @@ function startAttempt() {
   if (recent.length !== starter.length || recent.some((item, index) => item.direction !== starter[index])) {
     setResult("仕込み不足", "fail");
     el.hint.textContent = "中Kの前に ↓↘→、続けて ↓＋中K と入力してください。";
-    return;
+    return false;
   }
 
   const startedAt = performance.now();
@@ -126,6 +202,7 @@ function startAttempt() {
   setResult("キャンセル入力");
   paintCommand(3);
   el.hint.textContent = "残りは ↘→＋P。中足が戻る前に入力！";
+  return true;
 }
 
 function finishAttempt(success, reason) {
@@ -161,6 +238,7 @@ function updateStarterProgress() {
 
 function registerDirection(direction) {
   state.inputDirection = direction;
+  recordLeverDirection(direction);
   if (direction === "neutral") {
     state.lastDirection = "neutral";
     return;
@@ -190,16 +268,29 @@ function registerDirection(direction) {
 
 function registerAction(action) {
   if (action === "mk") {
-    startAttempt();
+    const started = startAttempt();
+    recordButton("中K", started ? "ok" : "ng", started ? "仕込み成立 · 0F" : "2362が未完成", started ? 0 : null);
     return;
   }
-  if (!["lp", "mp", "hp", "punch"].includes(action) || !state.attempt) return;
+  if (!["lp", "mp", "hp", "punch"].includes(action)) return;
+  const label = action === "lp" ? "弱P" : action === "mp" ? "中P" : action === "hp" ? "強P" : "P";
+  if (!state.attempt) {
+    recordButton(label, "idle", "キャンセル判定外");
+    return;
+  }
   const frame = nowFrames(state.attempt.startedAt);
   addHistory("P", frame);
   const complete = state.attempt.step >= 2;
   const withinTime = frame <= Number(el.target.value);
+  const success = complete && withinTime;
+  recordButton(
+    label,
+    success ? "ok" : "ng",
+    success ? `キャンセル成立 · ${frame}F` : complete ? `入力が遅い · ${frame}F` : `↘→不足 · ${frame}F`,
+    frame
+  );
   finishAttempt(
-    complete && withinTime,
+    success,
     complete ? "入力は完成。パンチを少し早く。" : "中K後の↘→が足りません。入力履歴を確認。"
   );
 }
@@ -266,6 +357,9 @@ function reset() {
   state.motionBuffer = [];
   state.lastDirection = "neutral";
   state.inputDirection = "neutral";
+  state.leverTimeline = [];
+  state.buttonTimeline = [];
+  renderLeverTimeline();
   el.history.innerHTML = '<span class="muted">入力待ち</span>';
   el.frames.textContent = "—";
   el.timeline.style.width = "0";
@@ -383,6 +477,7 @@ window.addEventListener("gamepadconnected", (event) => {
 });
 
 function animateTimeline() {
+  updateCurrentLeverFrames();
   if (state.attempt) {
     const progress = Math.min(100, nowFrames(state.attempt.startedAt) / Number(el.target.value) * 100);
     el.timeline.style.width = `${progress}%`;
