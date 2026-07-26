@@ -20,6 +20,8 @@ const state = {
   motionBuffer: [],
   lastDirection: "neutral",
   inputDirection: "neutral",
+  learnTarget: null,
+  learnedPunches: new Set(),
 };
 
 const el = {
@@ -36,7 +38,27 @@ const el = {
   mkButton: document.querySelector("#mk-button"),
   punchButtons: document.querySelector("#punch-buttons"),
   gamepadStatus: document.querySelector("#gamepad-status"),
+  liveDirection: document.querySelector("#live-direction"),
+  liveButtons: document.querySelector("#live-buttons"),
+  learnStatus: document.querySelector("#learn-status"),
+  learnMk: document.querySelector("#learn-mk"),
+  learnPunches: document.querySelector("#learn-punches"),
 };
+
+const savedSettings = JSON.parse(localStorage.getItem("shinku-trainer.settings") || "{}");
+if (savedSettings.targetFrames) el.target.value = savedSettings.targetFrames;
+if (Number.isInteger(savedSettings.mkButton)) el.mkButton.value = savedSettings.mkButton;
+if (Array.isArray(savedSettings.punchButtons)) el.punchButtons.value = savedSettings.punchButtons.join(",");
+el.targetOutput.textContent = `${el.target.value} F`;
+
+function saveSettings() {
+  const punchButtons = el.punchButtons.value.split(",").map(Number).filter(Number.isInteger);
+  localStorage.setItem("shinku-trainer.settings", JSON.stringify({
+    targetFrames: Number(el.target.value),
+    mkButton: Number(el.mkButton.value),
+    punchButtons,
+  }));
+}
 
 function nowFrames(start) {
   return Math.round((performance.now() - start) / frameMs);
@@ -254,20 +276,50 @@ function reset() {
 
 el.facing.addEventListener("click", toggleFacing);
 document.querySelector("#reset").addEventListener("click", reset);
-el.target.addEventListener("input", () => { el.targetOutput.textContent = `${el.target.value} F`; });
+el.target.addEventListener("input", () => {
+  el.targetOutput.textContent = `${el.target.value} F`;
+  saveSettings();
+});
+el.mkButton.addEventListener("change", saveSettings);
+el.punchButtons.addEventListener("change", saveSettings);
 
 function gamepadDirection(pad) {
-  const x = Math.abs(pad.axes[0] || 0) > .45 ? Math.sign(pad.axes[0]) : 0;
-  const y = Math.abs(pad.axes[1] || 0) > .45 ? Math.sign(pad.axes[1]) : 0;
+  const dpadX = pad.buttons[14]?.pressed ? -1 : pad.buttons[15]?.pressed ? 1 : 0;
+  const dpadY = pad.buttons[12]?.pressed ? -1 : pad.buttons[13]?.pressed ? 1 : 0;
+  const x = dpadX || (Math.abs(pad.axes[0] || 0) > .45 ? Math.sign(pad.axes[0]) : 0);
+  const y = dpadY || (Math.abs(pad.axes[1] || 0) > .45 ? Math.sign(pad.axes[1]) : 0);
   const vertical = y > 0 ? "down" : y < 0 ? "up" : "";
   const horizontal = x > 0 ? "right" : x < 0 ? "left" : "";
   return [vertical, horizontal].filter(Boolean).join("-") || "neutral";
+}
+
+function learnButton(index) {
+  if (state.learnTarget === "mk") {
+    el.mkButton.value = index;
+    state.learnTarget = null;
+    el.learnMk.classList.remove("learning");
+    el.learnMk.textContent = "中Kを自動設定";
+    el.learnStatus.textContent = `ボタン${index}を中Kに設定しました。`;
+    saveSettings();
+    return true;
+  }
+  if (state.learnTarget === "punches") {
+    state.learnedPunches.add(index);
+    el.punchButtons.value = [...state.learnedPunches].join(",");
+    el.learnStatus.textContent = `パンチ候補：${el.punchButtons.value}（3個押したら「設定完了」）`;
+    saveSettings();
+    return true;
+  }
+  return false;
 }
 
 function pollGamepad() {
   const pad = navigator.getGamepads?.()[state.gamepadIndex];
   if (pad) {
     const direction = gamepadDirection(pad);
+    const pressed = pad.buttons.map((button, index) => button.pressed ? index : null).filter((index) => index !== null);
+    el.liveDirection.textContent = directionGlyph[direction];
+    el.liveButtons.textContent = pressed.length ? pressed.join(", ") : "なし";
     if (direction !== state.previousPad.direction) {
       state.previousPad.direction = direction;
       registerDirection(direction);
@@ -277,8 +329,9 @@ function pollGamepad() {
     pad.buttons.forEach((button, index) => {
       const wasPressed = state.previousPad.buttons[index] || false;
       if (button.pressed && !wasPressed) {
-        if (index === mk) registerAction("mk");
-        if (punches.includes(index)) registerAction("punch");
+        const learned = learnButton(index);
+        if (!learned && index === mk) registerAction("mk");
+        if (!learned && punches.includes(index)) registerAction("punch");
       }
       state.previousPad.buttons[index] = button.pressed;
     });
@@ -294,6 +347,34 @@ document.querySelector("#connect").addEventListener("click", () => {
   } else {
     el.gamepadStatus.textContent = "アケコンのボタンを一度押してから再試行してください。";
   }
+});
+
+el.learnMk.addEventListener("click", () => {
+  state.learnTarget = state.learnTarget === "mk" ? null : "mk";
+  state.learnedPunches.clear();
+  el.learnMk.classList.toggle("learning", state.learnTarget === "mk");
+  el.learnPunches.classList.remove("learning");
+  el.learnMk.textContent = state.learnTarget === "mk" ? "中Kを押してください" : "中Kを自動設定";
+  el.learnPunches.textContent = "パンチを自動設定";
+  el.learnStatus.textContent = state.learnTarget === "mk" ? "アケコンの中Kボタンを1回押してください。" : "自動設定を中止しました。";
+});
+
+el.learnPunches.addEventListener("click", () => {
+  if (state.learnTarget === "punches") {
+    state.learnTarget = null;
+    el.learnPunches.classList.remove("learning");
+    el.learnPunches.textContent = "パンチを自動設定";
+    el.learnStatus.textContent = `パンチ設定を保存しました：${el.punchButtons.value}`;
+    return;
+  }
+  state.learnTarget = "punches";
+  state.learnedPunches.clear();
+  el.punchButtons.value = "";
+  el.learnMk.classList.remove("learning");
+  el.learnPunches.classList.add("learning");
+  el.learnMk.textContent = "中Kを自動設定";
+  el.learnPunches.textContent = "設定完了";
+  el.learnStatus.textContent = "弱P・中P・強Pを1回ずつ押し、最後に「設定完了」を押してください。";
 });
 
 window.addEventListener("gamepadconnected", (event) => {
