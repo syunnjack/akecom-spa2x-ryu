@@ -34,7 +34,7 @@ button { touch-action: manipulation; }
 h1 { margin: 6px 0; font-size: clamp(2.3rem, 10vw, 5rem); line-height: .95; font-style: italic; }
 .hero > p:last-child { color: #d4c2ba; }
 
-.status-card, .command-card, .controls-card, .history-card, .settings-card {
+.status-card, .command-card, .controls-card, .history-card, .settings-card, .video-guide-card {
   background: color-mix(in srgb, var(--panel) 92%, transparent);
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -90,7 +90,11 @@ h1 { margin: 6px 0; font-size: clamp(2.3rem, 10vw, 5rem); line-height: .95; font
 #result.success { color: #7ee787; }
 #result.fail { color: #ff7b72; }
 
-.command-card, .history-card, .settings-card { padding: 20px; margin-bottom: 12px; }
+.command-card, .history-card, .settings-card, .video-guide-card { padding: 20px; margin-bottom: 12px; }
+.video-guide-card ol { margin: 14px 0 10px; padding-left: 1.4rem; color: #e6d7cf; }
+.video-guide-card li { margin: 8px 0; line-height: 1.55; }
+.video-guide-card p { color: #bfa9a0; font-size: .82rem; }
+.video-guide-card a { color: var(--gold); }
 .command-head, .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 h2 { margin: 0; font-size: 1rem; }
 .small-button {
