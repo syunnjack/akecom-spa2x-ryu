@@ -44,6 +44,8 @@ const el = {
   timeline: document.querySelector("#timeline-fill"),
   target: document.querySelector("#target-frames"),
   targetOutput: document.querySelector("#target-output"),
+  targetStart: document.querySelector("#target-start-frames"),
+  targetStartOutput: document.querySelector("#target-start-output"),
   facing: document.querySelector("#facing"),
   mkButton: document.querySelector("#mk-button"),
   punchButtons: document.querySelector("#punch-buttons"),
@@ -58,14 +60,17 @@ const el = {
 
 const savedSettings = JSON.parse(localStorage.getItem("shinku-trainer.settings") || "{}");
 if (savedSettings.targetFrames) el.target.value = savedSettings.targetFrames;
+if (savedSettings.targetStartFrames) el.targetStart.value = savedSettings.targetStartFrames;
 if (Number.isInteger(savedSettings.mkButton)) el.mkButton.value = savedSettings.mkButton;
 if (Array.isArray(savedSettings.punchButtons)) el.punchButtons.value = savedSettings.punchButtons.join(",");
 el.targetOutput.textContent = `${el.target.value} F`;
+el.targetStartOutput.textContent = `${el.targetStart.value} F`;
 
 function saveSettings() {
   const punchButtons = el.punchButtons.value.split(",").map(Number).filter(Number.isInteger);
   localStorage.setItem("shinku-trainer.settings", JSON.stringify({
     targetFrames: Number(el.target.value),
+    targetStartFrames: Number(el.targetStart.value),
     mkButton: Number(el.mkButton.value),
     punchButtons,
   }));
@@ -249,7 +254,8 @@ function registerDirection(direction) {
   if (!state.attempt) {
     const time = performance.now();
     state.motionBuffer.push({ direction, time });
-    state.motionBuffer = state.motionBuffer.filter((item) => time - item.time <= 1000).slice(-10);
+    // 必殺技より長いスパコン受付を利用する練習向けに、前半入力を最大120F保持する。
+    state.motionBuffer = state.motionBuffer.filter((item) => time - item.time <= 2000).slice(-10);
     updateStarterProgress();
     return;
   }
@@ -281,17 +287,24 @@ function registerAction(action) {
   const frame = nowFrames(state.attempt.startedAt);
   addHistory("P", frame);
   const complete = state.attempt.step >= 2;
-  const withinTime = frame <= Number(el.target.value);
+  const targetStart = Number(el.targetStart.value);
+  const targetEnd = Number(el.target.value);
+  const withinTime = frame >= targetStart && frame <= targetEnd;
   const success = complete && withinTime;
+  const timingDetail = frame < targetStart
+    ? `早すぎ（目安 ${targetStart}〜${targetEnd}F） · ${frame}F`
+    : `遅すぎ（目安 ${targetStart}〜${targetEnd}F） · ${frame}F`;
   recordButton(
     label,
     success ? "ok" : "ng",
-    success ? `キャンセル成立 · ${frame}F` : complete ? `入力が遅い · ${frame}F` : `↘→不足 · ${frame}F`,
+    success ? `完成タイミング内 · ${frame}F` : complete ? timingDetail : `↘→不足 · ${frame}F`,
     frame
   );
   finishAttempt(
     success,
-    complete ? "入力は完成。パンチを少し早く。" : "中K後の↘→が足りません。入力履歴を確認。"
+    complete
+      ? frame < targetStart ? "入力完成が早すぎます。Pを少し遅らせてヒット後へ合わせます。" : "入力完成が遅すぎます。中K後の↘→＋Pを短くします。"
+      : "中K後の↘→が足りません。入力履歴を確認。"
   );
 }
 
@@ -371,7 +384,19 @@ function reset() {
 el.facing.addEventListener("click", toggleFacing);
 document.querySelector("#reset").addEventListener("click", reset);
 el.target.addEventListener("input", () => {
+  if (Number(el.target.value) <= Number(el.targetStart.value)) {
+    el.targetStart.value = Math.max(1, Number(el.target.value) - 1);
+    el.targetStartOutput.textContent = `${el.targetStart.value} F`;
+  }
   el.targetOutput.textContent = `${el.target.value} F`;
+  saveSettings();
+});
+el.targetStart.addEventListener("input", () => {
+  if (Number(el.targetStart.value) >= Number(el.target.value)) {
+    el.target.value = Math.min(30, Number(el.targetStart.value) + 1);
+    el.targetOutput.textContent = `${el.target.value} F`;
+  }
+  el.targetStartOutput.textContent = `${el.targetStart.value} F`;
   saveSettings();
 });
 el.mkButton.addEventListener("change", saveSettings);
