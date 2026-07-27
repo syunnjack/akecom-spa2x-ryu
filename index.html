@@ -81,12 +81,29 @@
         <div id="history" class="history"><span class="muted">入力待ち</span></div>
       </section>
 
+      <section class="video-guide-card">
+        <span class="label">REFERENCE VIDEO METHOD</span>
+        <h2>動画に合わせた判定</h2>
+        <ol>
+          <li><strong>2362＋中K</strong>：スパコン入力の途中へ中足を割り込ませる</li>
+          <li><strong>36＋P</strong>：Pで入力が完成する瞬間を、中足ヒット後の短い時間へ合わせる</li>
+          <li>前半入力に意図的な間を作り、波動拳の暴発を避ける練習もできる</li>
+        </ol>
+        <p>このページはゲーム画面のヒットを検出できないため、フレーム判定は入力タイミングの目安です。</p>
+        <a href="https://youtu.be/3VesMYGkWLI?si=lhJWABrTPqC0wka3" target="_blank" rel="noopener noreferrer">参考動画を開く</a>
+      </section>
+
       <details class="settings-card">
         <summary>練習設定</summary>
         <label>
-          中K後の目標フレーム
-          <input id="target-frames" type="range" min="8" max="30" value="16" />
-          <output id="target-output">16 F</output>
+          P入力の最短フレーム（早すぎ判定）
+          <input id="target-start-frames" type="range" min="1" max="30" value="4" />
+          <output id="target-start-output">4 F</output>
+        </label>
+        <label>
+          P入力の最長フレーム（遅すぎ判定）
+          <input id="target-frames" type="range" min="2" max="30" value="8" />
+          <output id="target-output">8 F</output>
         </label>
         <label>
           中Kボタン番号
