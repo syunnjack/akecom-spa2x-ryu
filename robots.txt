@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://syunnjack.github.io/akecom-spa2x-ryu/sitemap.xml
